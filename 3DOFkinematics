@@ -1,0 +1,77 @@
+import math
+import numpy as np
+from matplotlib.widgets import Slider
+
+import matplotlib.pyplot as plt
+
+class ThreeDOFKinematics:
+    def __init__(self, l1, l2, l3):
+        self.l1 = l1
+        self.l2 = l2
+        self.l3 = l3
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.ax.view_init(elev=30, azim=45)
+
+    def forward_kinematics(self, t1, t2, t3):
+        t1 = math.radians(t1)
+        t2 = math.radians(t2)
+        t3 = math.radians(t3)
+        
+        x = self.l1 * math.cos(t1) + self.l2 * math.cos(t1 + t2) + self.l3 * math.cos(t1 + t2 + t3)
+        y = self.l1 * math.sin(t1) + self.l2 * math.sin(t1 + t2) + self.l3 * math.sin(t1 + t2 + t3)
+        return x, y
+
+    def inverse_kinematics(self, x, y):
+        d = (x**2 + y**2 - self.l1**2 - self.l2**2 - self.l3**2) / (2 * self.l1)
+        if abs(d) > 1:
+            raise ValueError("this is impossible")
+        t1 = math.atan2(y, x) - math.acos(d)
+        k1 = self.l1 + self.l2 * math.cos(t1)
+        k2 = self.l2 * math.sin(t1)
+        t2 = math.atan2(k2, k1) - t1
+        k3 = k1 + self.l3 * math.cos(t1 + t2)
+        k4 = k2 + self.l3 * math.sin(t1 + t2)
+        t3 = math.atan2(y - k4, x - k3) - t1 - t2
+        
+        return math.degrees(t1), math.degrees(t2), math.degrees(t3)
+
+    def plot_kinematics(self, t1, t2, t3):
+        x, y = self.forward_kinematics(t1, t2, t3)
+        
+        self.ax.clear()
+        self.ax.plot([0, self.l1 * math.cos(math.radians(t1))],
+                     [0, self.l1 * math.sin(math.radians(t1))], [0, 0], 'r-')
+        self.ax.plot([self.l1 * math.cos(math.radians(t1)), x],
+                     [self.l1 * math.sin(math.radians(t1)), y], [0, 0], 'b-')
+
+        self.ax.set_xlim([0, self.l1 + self.l2 + self.l3])
+        self.ax.set_ylim([0, self.l1 + self.l2 + self.l3])
+        self.ax.set_zlim([0, self.l1 + self.l2 + self.l3])
+        
+        self.fig.canvas.draw()
+
+def update(val):
+    t1 = slider1.val
+    t2 = slider2.val
+    t3 = slider3.val
+    kinematics.plot_kinematics(t1, t2, t3)
+
+kinematics = ThreeDOFKinematics(1, 1, 1)
+
+fig, ax = plt.subplots()
+plt.subplots_adjust(left=0.25, bottom=0.25)
+
+ax_slider1 = plt.axes([0.25, 0.1, 0.65, 0.03])
+ax_slider2 = plt.axes([0.25, 0.15, 0.65, 0.03])
+ax_slider3 = plt.axes([0.25, 0.2, 0.65, 0.03])
+
+slider1 = Slider(ax_slider1, 't1', 0, 360, valinit=0)
+slider2 = Slider(ax_slider2, 't2', 0, 360, valinit=0)
+slider3 = Slider(ax_slider3, 't3', 0, 360, valinit=0)
+
+slider1.on_changed(update)
+slider2.on_changed(update)
+slider3.on_changed(update)
+
+plt.show()
