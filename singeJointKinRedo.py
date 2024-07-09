@@ -8,7 +8,7 @@ class offsetJointKinematics:
         self.l1 = l1
         self.l2 = l2
         self.l3 = None 
-        self.l4 = l4
+        self.l4 = l4 
         self.l5 = l5
         self.l6 = math.dist((0, 0), (x4, y4))
         
@@ -89,7 +89,9 @@ class InteractivePlot:
         self.ax.legend()
         plt.show()
 
-OJK1 = offsetJointKinematics(20, 10, 10, 18, 0, 5, 30, 110)
+OJK1 = offsetJointKinematics(23, 10, 10, 18, 0, 5, 25.55469378478778, 113.03568410594136)
+print("Theta 3: ", math.degrees(OJK1.getThetaThree()))
+print("Theta 4: ", math.degrees(OJK1.getthetaFour()))
 print("Theta 5: ", math.degrees(OJK1.getThetaFive()))
 
 plot = InteractivePlot()
