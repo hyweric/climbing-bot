@@ -63,8 +63,8 @@ class ThreeDOFKinematics:
         ax.set_zlim([-self.l1 - self.l2 - self.l3, self.l1 + self.l2 + self.l3])
 
         ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
+        ax.set_ylabel('Z')
+        ax.set_zlabel('Y')
         ax.set_aspect('auto')
         plt.draw()
 

@@ -1,0 +1,2 @@
+lsof /dev/cu.usbserial-10
+kill -9 PID
