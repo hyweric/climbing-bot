@@ -6,11 +6,11 @@ Servo s3;
 
 void setup() {
   Serial.begin(9600);  
-  s2.attach(9);
+  s2.attach(3);
   s3.attach(10);
   
   s2.write(150);
-  s3.write(60);
+  s3.write(130);
 }
 
 void smoothWrite(Servo servo, int target, int speed) {

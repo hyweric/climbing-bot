@@ -8,6 +8,12 @@ def send_angle(servo_id, angle):
     arduino.write(message.encode())
     time.sleep(0.05) # small delay to ensure data is sent
 
+def transform_angle1(angle):
+    return angle + 63 
+
+def transform_angle2(angle):
+    return angle + 50
+
 while True:
     servo_id = input("SERVOID (1, 2, 3): ")
     if servo_id not in ['1', '2', '3']:
@@ -15,8 +21,9 @@ while True:
         continue
     
     try:
-        angle = int(input("Enter angle (0-180): "))
-        if 0 <= angle <= 180:
+        angle = int(input("Enter angle (-180-180): "))
+        if -180 <= angle <= 180:
+            angle = transform_angle1(angle) if servo_id == '' else transform_angle2(angle)
             send_angle(servo_id, angle)
         else:
             print("invalid (0-180)")
