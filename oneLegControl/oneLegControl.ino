@@ -37,10 +37,6 @@ void loop() {
     int angle = input.substring(1).toInt();
 
     switch (servoID) {
-      case '1':
-        smoothWrite(s1, angle, 10);
-        Serial.println("1:" + angle);
-        break;
       case '2':
         smoothWrite(s2, angle, 10);
         Serial.println("2:" + angle);

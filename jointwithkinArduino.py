@@ -148,10 +148,10 @@ def update_plot(x, y):
 
     OJK1 = offsetJointKinematics(upperLeg, 30, 35, 55, lowerLeg, 0, 30, math.degrees(t1), math.degrees(t2))
     print("Angle 1 (Theta 1): ", OJK1.t1) 
-    send_angle('2', transform_angle1(OJK1.t1))
+    send_angle('3', transform_angle1(OJK1.t1))
     
     print("Angle 5 (Theta 5): ", math.degrees(OJK1.getThetaFive()))
-    send_angle('3', transform_angle2(math.degrees(OJK1.getThetaFive())))
+    send_angle('2', transform_angle2(math.degrees(OJK1.getThetaFive())))
 
 
     # offsetjoint kinematics parameters: l1, l2, l4, l5, l8, x4, y4, t1, t2
