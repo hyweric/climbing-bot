@@ -3,47 +3,39 @@
 Servo s1;
 Servo s2; 
 Servo s3;
+int servoTargetAdjusted;
 
 void setup() {
-  Serial.begin(9600); 
-  s1.attach(3); 
-  s2.attach(9);
+  Serial.begin(9600);  
+  s2.attach(3);
   s3.attach(10);
   
-  s1.write(110);
-  s2.write(90);
-  s3.write(28);
+  s3.write(124);
+  s2.write(106);
 }
 
 void smoothWrite(Servo servo, int target, int speed) {
-  int currentPosition = servo.read();
-  int distance = abs(target - currentPosition);
-  int direction = (target > currentPosition) ? 1 : -1;
-
-  for (int i = 0; i <= distance; i++) {
-    int newPosition = currentPosition + (direction * i);
-    servo.write(newPosition);
-    delay(speed);
-  }
+  servoTargetAdjusted = map(target, 0, 180, 0, 130); // for some reason the write function needs to be scaled. 
+  servo.write(servoTargetAdjusted);
 }
 
 void loop() {
+  Serial.print("s2: ");
+  Serial.println(s2.read());
+  Serial.print("s3: ");
+  Serial.println(s3.read());
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     char servoID = input.charAt(0);
     int angle = input.substring(1).toInt();
 
     switch (servoID) {
-      case '1':
-        smoothWrite(s1, angle, 3);
-        Serial.println("1:" + angle);
-        break;
       case '2':
-        smoothWrite(s2, angle, 3);
+        smoothWrite(s2, angle, 10);
         Serial.println("2:" + angle);
         break;
       case '3':
-        smoothWrite(s3, angle, 3);
+        smoothWrite(s3, angle, 10);
         Serial.println("3:" + angle);
         break;
       default:

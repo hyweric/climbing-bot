@@ -117,10 +117,10 @@ class Plot:
         plt.show()
 
 def transform_angle1(angle):
-    return angle + 63 + 90 
+    return angle + 90
 
 def transform_angle2(angle):
-    return angle + 50 + 90
+    return angle + 90
 
 arduino = serial.Serial(port='/dev/cu.usbserial-10', baudrate=9600, timeout=.1)
 
@@ -131,14 +131,15 @@ def send_angle(servo_id, angle):
 
 # Initial values
 x, y = 10, -70
-upperLeg = 35
-lowerLeg = 55
+upperLeg = 80
+lowerLeg = 128
 
 twoInitPos = 150 # -33 
 threeInitPos = 60 # -14
 
 
 plot = Plot()
+
 def update_plot(x, y):
     result = inverseKinematics(x, y, upperLeg, lowerLeg)
     if result == "No solution":
@@ -146,15 +147,15 @@ def update_plot(x, y):
     else:
         t1, t2 = result
 
-    OJK1 = offsetJointKinematics(upperLeg, 30, 35, 55, lowerLeg, 0, 30, math.degrees(t1), math.degrees(t2))
-    print("Angle 1 (Theta 1): ", OJK1.t1) 
-    send_angle('3', transform_angle1(OJK1.t1))
-    
-    print("Angle 5 (Theta 5): ", math.degrees(OJK1.getThetaFive()))
-    send_angle('2', transform_angle2(math.degrees(OJK1.getThetaFive())))
-
+    OJK1 = offsetJointKinematics(upperLeg, 68, 80, 125, lowerLeg, 0, 70, math.degrees(t1), math.degrees(t2))
 
     # offsetjoint kinematics parameters: l1, l2, l4, l5, l8, x4, y4, t1, t2
+    
+    print("Angle 1 (Theta 1): ", transform_angle1(OJK1.t1)) 
+    send_angle('3', transform_angle1(OJK1.t1))
+    
+    print("Angle 5 (Theta 5): ", transform_angle2(math.degrees(OJK1.getThetaFive())))
+    send_angle('2', transform_angle2(math.degrees(OJK1.getThetaFive())))
 
     plot.add_or_update_point('p1', OJK1.p1[0], OJK1.p1[1])
     plot.add_or_update_point('p2', OJK1.p2[0], OJK1.p2[1])
@@ -172,8 +173,8 @@ def update_plot(x, y):
     plot.add_or_update_line('p2', 'endpoint')
     plot.add_or_update_line('p2', 'p6')
     
-    plot.ax.set_xlim(-100, 100)
-    plot.ax.set_ylim(-100, 100)
+    plot.ax.set_xlim(-150, 150)
+    plot.ax.set_ylim(-150, 150)
 
     plt.draw()
 
@@ -182,12 +183,14 @@ axcolor = 'lightgoldenrodyellow'
 ax_x = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
 ax_y = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
 
-sl_x = Slider(ax_x, 'X', -100.0, 100.0, valinit=x)
-sl_y = Slider(ax_y, 'Y', -100.0, 100.0, valinit=y)
+sl_x = Slider(ax_x, 'X', -300.0, 300.0, valinit=x)
+sl_y = Slider(ax_y, 'Y', -300.0, 300.0, valinit=y)
 
 def update(val):
     x = sl_x.val
+    print("X: ", x)
     y = sl_y.val
+    print("Y: ", y)
     update_plot(x, y)
 
 sl_x.on_changed(update)
@@ -202,6 +205,7 @@ def reset(event):
 
 button.on_clicked(reset)
 
-# Initial plot
+# Initial plot (servo init pos determined by arduino program)
 update_plot(x, y)
+
 plt.show()
