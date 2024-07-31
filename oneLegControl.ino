@@ -10,8 +10,8 @@ void setup() {
   s2.attach(3);
   s3.attach(10);
   
-  s3.write(124);
-  s2.write(106);
+  smoothWrite(s2, 106, 1);
+  smoothWrite(s3, 124, 1);
 }
 
 void smoothWrite(Servo servo, int target, int speed) {
@@ -20,15 +20,17 @@ void smoothWrite(Servo servo, int target, int speed) {
 }
 
 void loop() {
-  Serial.print("s2: ");
-  Serial.println(s2.read());
-  Serial.print("s3: ");
-  Serial.println(s3.read());
+  
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     char servoID = input.charAt(0);
     int angle = input.substring(1).toInt();
+    Serial.print("s3: ");
+    Serial.println(s3.read());
 
+    Serial.print("s2: ");
+    Serial.println(s2.read());
+  
     switch (servoID) {
       case '2':
         smoothWrite(s2, angle, 10);

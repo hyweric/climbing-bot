@@ -134,11 +134,19 @@ x, y = 10, -70
 upperLeg = 80
 lowerLeg = 128
 
-twoInitPos = 150 # -33 
-threeInitPos = 60 # -14
-
-
 plot = Plot()
+
+t1Stack = []
+t2Stack = []
+
+def moving_avg(theta, stack):
+    stack.append(theta)
+    if len(stack) == 0:
+        return theta
+    if len(stack) > 6:
+        stack.pop(0)
+    return sum(stack) / len(stack)
+
 
 def update_plot(x, y):
     result = inverseKinematics(x, y, upperLeg, lowerLeg)
@@ -151,11 +159,11 @@ def update_plot(x, y):
 
     # offsetjoint kinematics parameters: l1, l2, l4, l5, l8, x4, y4, t1, t2
     
-    print("Angle 1 (Theta 1): ", transform_angle1(OJK1.t1)) 
-    send_angle('3', transform_angle1(OJK1.t1))
+    print("Angle 1 (Theta 1): ", moving_avg(transform_angle1(OJK1.t1), t1Stack)) 
+    send_angle('3', moving_avg(transform_angle1(OJK1.t1), t1Stack))
     
-    print("Angle 5 (Theta 5): ", transform_angle2(math.degrees(OJK1.getThetaFive())))
-    send_angle('2', transform_angle2(math.degrees(OJK1.getThetaFive())))
+    print("Angle 5 (Theta 5): ", moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
+    send_angle('2', moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
 
     plot.add_or_update_point('p1', OJK1.p1[0], OJK1.p1[1])
     plot.add_or_update_point('p2', OJK1.p2[0], OJK1.p2[1])
@@ -173,8 +181,8 @@ def update_plot(x, y):
     plot.add_or_update_line('p2', 'endpoint')
     plot.add_or_update_line('p2', 'p6')
     
-    plot.ax.set_xlim(-150, 150)
-    plot.ax.set_ylim(-150, 150)
+    plot.ax.set_xlim(-300, 300)
+    plot.ax.set_ylim(-300, 300)
 
     plt.draw()
 
@@ -183,29 +191,37 @@ axcolor = 'lightgoldenrodyellow'
 ax_x = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
 ax_y = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
 
-sl_x = Slider(ax_x, 'X', -300.0, 300.0, valinit=x)
-sl_y = Slider(ax_y, 'Y', -300.0, 300.0, valinit=y)
+def trace_path(equation, x_range, x_direction):
+    if (x_direction > 0):
+        current_x = x_range[0]
+        while(current_x <= x_range[1]):
+            y = equation(current_x)
+            print("X: ", current_x, "Y: ", y)
+            update_plot(current_x, y)
+            plt.pause(0.0005)
+            current_x += x_direction
+            # time.sleep(0.01)
+    elif (x_direction < 0):
+        current_x = x_range[1]
+        while(current_x >= x_range[0]):
+            y = equation(current_x)
+            print("X: ", current_x, "Y: ", y)
+            update_plot(current_x, y)
+            plt.pause(0.0005)
+            current_x += x_direction
+            # time.sleep(0.01)
 
-def update(val):
-    x = sl_x.val
-    print("X: ", x)
-    y = sl_y.val
-    print("Y: ", y)
-    update_plot(x, y)
+def sin_step(x):
+    return (70/2) * math.sin(2*math.pi / 140 * x + math.pi/2)-135
 
-sl_x.on_changed(update)
-sl_y.on_changed(update)
+def semi_circle(x):
+    return math.sqrt(70**2 - x**2) - 170
 
-resetax = plt.axes([0.8, 0.025, 0.1, 0.04])
-button = Button(resetax, 'Reset', hovercolor='0.975')
-
-def reset(event):
-    sl_x.reset()
-    sl_y.reset()
-
-button.on_clicked(reset)
+def flat_line(x):
+    return -170
 
 # Initial plot (servo init pos determined by arduino program)
-update_plot(x, y)
-
-plt.show()
+for x in range(5):
+    trace_path(sin_step, (-70, 70), 20)
+    # trace_path(semi_circle, (-70, 70), 5)
+    trace_path(flat_line, (-70, 70), -30)
