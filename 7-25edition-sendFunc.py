@@ -114,7 +114,7 @@ class Plot:
 
     def show(self):
         self.ax.legend()
-        plt.show()
+        plt.show() 
 
 def transform_angle1(angle):
     return angle + 90
@@ -127,7 +127,7 @@ arduino = serial.Serial(port='/dev/cu.usbserial-10', baudrate=9600, timeout=.1)
 def send_angle(servo_id, angle):
     message = f"{servo_id}{angle}\n"
     arduino.write(message.encode())
-    time.sleep(0.05) # small delay to ensure data is sent
+    time.sleep(0.02) # small delay to ensure data is sent
 
 # Initial values
 x, y = 10, -70
@@ -222,6 +222,6 @@ def flat_line(x):
 
 # Initial plot (servo init pos determined by arduino program)
 for x in range(5):
-    trace_path(sin_step, (-70, 70), 20)
+    trace_path(sin_step, (-70, 70), -10)
     # trace_path(semi_circle, (-70, 70), 5)
-    trace_path(flat_line, (-70, 70), -30)
+    trace_path(flat_line, (-70, 70), 30)

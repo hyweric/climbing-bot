@@ -1,3 +1,5 @@
+# Single Leg Control With Sliders 
+
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -117,7 +119,7 @@ class Plot:
         plt.show()
 
 def transform_angle1(angle):
-    return angle + 90
+    return angle + 100
 
 def transform_angle2(angle):
     return angle + 90
