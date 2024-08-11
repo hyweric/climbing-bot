@@ -1,27 +1,45 @@
 import math
 import numpy as np
 from matplotlib.widgets import Slider, Button
-import serial
 import time
 import matplotlib.pyplot as plt
+
 from PlotClass import Plot
 from OJK import offsetJointKinematics, inverseKinematics
 from legEquations import legEquations
 
-def transform_angle1(angle):
-    return angle + 90
+from adafruit_servokit import ServoKit
 
-def transform_angle2(angle):
-    return angle + 90
+kit = ServoKit(channels=16)
 
-arduino = serial.Serial(port='/dev/cu.usbserial-10', baudrate=9600, timeout=.1)
+def call_angle(servo_id, angle):
+    if 0 <= angle <=180:
+        print("CALL ANGLE - Servo ID: ", servo_id, " Angle: ", angle)
+        kit.servo[servo_id].angle = angle
+    else:
+        print("INVALID ANGLE: ", angle, " for servo: ", servo_id)
 
-def send_angle(servo_id, angle):
-    message = f"{servo_id}{angle}\n"
-    arduino.write(message.encode())
-    time.sleep(0.02) # small delay to ensure data is sent
+    # Set servo actuation range
+    # kit.servo[channel].actuation_range = 180
 
-# Initial values
+# Not sure if needed - needed to map when using arduino at least. Servo problem?
+def adjust_target(angle):
+    if angle < 0:
+        angle = 0
+    elif angle > 180:
+        angle = 180
+    angle = np.interp(angle, [0, 180], [0, 130])
+    return angle
+
+legServoList = {
+    1: [['1','2'], [0,0]], # leg, [[servo id, servo id] [angle1-offset, angle2-offset]]
+    2: [['3','4'], [0,0]],
+    3: [['5','6'], [0,0]],
+    4: [['7','8'], [0,0]]
+}
+offset_angle = lambda angle, leg, servo_id: angle + legServoList[leg][1][servo_id]
+
+# Initial positional values
 x, y = 10, -70
 upperLeg = 80
 lowerLeg = 128
@@ -40,7 +58,7 @@ def moving_avg(theta, stack):
     return sum(stack) / len(stack)
 
 
-def update_plot(x, y):
+def update_plot(x, y, leg):
     result = inverseKinematics(x, y, upperLeg, lowerLeg)
     if result == "No solution":
         return
@@ -51,11 +69,11 @@ def update_plot(x, y):
 
     # offsetjoint kinematics parameters: l1, l2, l4, l5, l8, x4, y4, t1, t2
     
-    print("Angle 1 (Theta 1): ", moving_avg(transform_angle1(OJK1.t1), t1Stack)) 
-    send_angle('3', moving_avg(transform_angle1(OJK1.t1), t1Stack))
+    print(f"Leg: {leg} Angle 1 (Theta 1): {moving_avg(offset_angle(math.degrees(OJK1.t1), leg, 0), t1Stack)}") 
+    call_angle(legServoList[leg][0], moving_avg(offset_angle(math.degrees(OJK1.t1), leg, 0), t1Stack))
     
-    print("Angle 5 (Theta 5): ", moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
-    send_angle('2', moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
+    print(f"Leg: {leg} Angle 5 (Theta 5): {moving_avg(offset_angle(math.degrees(OJK1.getThetaFive()), leg, 1), t2Stack)}")
+    call_angle(legServoList[leg][1], moving_avg(offset_angle(math.degrees(OJK1.getThetaFive()), leg, 1), t2Stack))
 
     plot.add_or_update_point('p1', OJK1.p1[0], OJK1.p1[1])
     plot.add_or_update_point('p2', OJK1.p2[0], OJK1.p2[1])
@@ -83,13 +101,13 @@ axcolor = 'lightgoldenrodyellow'
 ax_x = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
 ax_y = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
 
-def trace_path(equation, x_range, x_direction):
+def trace_path(equation, x_range, x_direction, leg):
     if (x_direction > 0):
         current_x = x_range[0]
         while(current_x <= x_range[1]):
             y = equation(current_x)
             print("X: ", current_x, "Y: ", y)
-            update_plot(current_x, y)
+            update_plot(current_x, y, leg)
             plt.pause(0.0005)
             current_x += x_direction
             # time.sleep(0.01)
@@ -98,14 +116,15 @@ def trace_path(equation, x_range, x_direction):
         while(current_x >= x_range[0]):
             y = equation(current_x)
             print("X: ", current_x, "Y: ", y)
-            update_plot(current_x, y)
+            update_plot(current_x, y, leg)
             plt.pause(0.0005)
             current_x += x_direction
             # time.sleep(0.01)
 
 legEq = legEquations()
+
+
 # Initial plot (servo init pos determined by arduino program)
-for x in range(2):
-    trace_path(legEq.sin_step, (-70, 70), -12)
-    # trace_path(semi_circle, (-70, 70), 5)
-    trace_path(legEq.flat_line, (-70, 70), 20)
+def take_step(leg):
+    trace_path(legEq.sin_step, (-70, 70), -20, leg)
+    trace_path(legEq.flat_line, (-70, 70), 30, leg)

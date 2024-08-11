@@ -4,6 +4,7 @@ from matplotlib.widgets import Slider, Button
 import serial
 import time
 import matplotlib.pyplot as plt
+
 from PlotClass import Plot
 from OJK import offsetJointKinematics, inverseKinematics
 from legEquations import legEquations
@@ -14,12 +15,20 @@ def transform_angle1(angle):
 def transform_angle2(angle):
     return angle + 90
 
-arduino = serial.Serial(port='/dev/cu.usbserial-10', baudrate=9600, timeout=.1)
+arduino = serial.Serial(port='/dev/cu.usbserial-10/', baudrate=9600, timeout=.1)
 
 def send_angle(servo_id, angle):
     message = f"{servo_id}{angle}\n"
     arduino.write(message.encode())
+    
     time.sleep(0.02) # small delay to ensure data is sent
+
+servoList = {
+    1: ['1','2'], # leg, [servo id, servo id]
+    2: ['3','4'],
+    3: ['5','6'],
+    4: ['7','8']
+}
 
 # Initial values
 x, y = 10, -70
@@ -40,7 +49,7 @@ def moving_avg(theta, stack):
     return sum(stack) / len(stack)
 
 
-def update_plot(x, y):
+def update_plot(x, y, leg):
     result = inverseKinematics(x, y, upperLeg, lowerLeg)
     if result == "No solution":
         return
@@ -51,11 +60,11 @@ def update_plot(x, y):
 
     # offsetjoint kinematics parameters: l1, l2, l4, l5, l8, x4, y4, t1, t2
     
-    print("Angle 1 (Theta 1): ", moving_avg(transform_angle1(OJK1.t1), t1Stack)) 
-    send_angle('3', moving_avg(transform_angle1(OJK1.t1), t1Stack))
+    print(f"Leg: {leg} Angle 1 (Theta 1): {moving_avg(transform_angle1(OJK1.t1), t1Stack)}") 
+    send_angle(servoList[leg][0], moving_avg(transform_angle1(OJK1.t1), t1Stack))
     
-    print("Angle 5 (Theta 5): ", moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
-    send_angle('2', moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
+    print(f"Leg: {leg} Angle 5 (Theta 5): {moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack)}")
+    send_angle(servoList[leg][1], moving_avg(transform_angle2(math.degrees(OJK1.getThetaFive())), t2Stack))
 
     plot.add_or_update_point('p1', OJK1.p1[0], OJK1.p1[1])
     plot.add_or_update_point('p2', OJK1.p2[0], OJK1.p2[1])
@@ -83,13 +92,13 @@ axcolor = 'lightgoldenrodyellow'
 ax_x = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
 ax_y = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
 
-def trace_path(equation, x_range, x_direction):
+def trace_path(equation, x_range, x_direction, leg):
     if (x_direction > 0):
         current_x = x_range[0]
         while(current_x <= x_range[1]):
             y = equation(current_x)
             print("X: ", current_x, "Y: ", y)
-            update_plot(current_x, y)
+            update_plot(current_x, y, leg)
             plt.pause(0.0005)
             current_x += x_direction
             # time.sleep(0.01)
@@ -98,14 +107,16 @@ def trace_path(equation, x_range, x_direction):
         while(current_x >= x_range[0]):
             y = equation(current_x)
             print("X: ", current_x, "Y: ", y)
-            update_plot(current_x, y)
+            update_plot(current_x, y, leg)
             plt.pause(0.0005)
             current_x += x_direction
             # time.sleep(0.01)
 
 legEq = legEquations()
+
+
 # Initial plot (servo init pos determined by arduino program)
-for x in range(2):
-    trace_path(legEq.sin_step, (-70, 70), -12)
+for x in range(3):
+    trace_path(legEq.sin_step, (-70, 70), -1, leg=1)
     # trace_path(semi_circle, (-70, 70), 5)
-    trace_path(legEq.flat_line, (-70, 70), 20)
+    trace_path(legEq.flat_line, (-70, 70), 1, leg=1)
