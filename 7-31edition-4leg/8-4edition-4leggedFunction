@@ -15,11 +15,11 @@ def transform_angle1(angle):
 def transform_angle2(angle):
     return angle + 90
 
-arduino = serial.Serial(port='/dev/cu.usbserial-10/', baudrate=9600, timeout=.1)
+# arduino = serial.Serial(port='/dev/cu.usbserial-10/', baudrate=9600, timeout=.1)
 
 def send_angle(servo_id, angle):
     message = f"{servo_id}{angle}\n"
-    arduino.write(message.encode())
+    # arduino.write(message.encode())
     
     time.sleep(0.02) # small delay to ensure data is sent
 
