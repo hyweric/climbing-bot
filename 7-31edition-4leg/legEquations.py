@@ -11,3 +11,6 @@ class legEquations:
 
     def flat_line(self, x):
         return -170
+
+    def upstep(self, x):
+        return 1000 * (x + 70) - 170    

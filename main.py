@@ -10,7 +10,7 @@ from pynput import keyboard
 
 # from PlotClass import Plot
 # from OJK import offsetJointKinematics, inverseKinematics
-from legEquations import legEquations
+# from legEquations import legEquations
 
 from adafruit_servokit import ServoKit
 
@@ -65,6 +65,7 @@ class Plot:
         self.ax.set_ylim(-300, 300)
 
         plt.draw()
+
 
 
 def inverseKinematics(x, y, len1, len2):
@@ -152,14 +153,14 @@ class legEquations:
     def sin_step(self, x):
         return (70/2) * math.sin(2 * math.pi / 140 * x + math.pi/2) - 135
 
-    def semi_circle(self, x):
-        return math.sqrt(70**2 - x**2) - 170
-
     def flat_line(self, x):
         return -170
-    
-    def upstep(self, x):
-        return 1000 * (x + 70) - 170    
+
+#     def backdown(self,x):
+#         return (0.6 * x - 170)
+# 
+#     def tinyCurveUp(self, x):
+#         return (1/55) * (x + 28.6) ** 2 - 200
 
 kit = ServoKit(channels=8)
 
@@ -271,39 +272,25 @@ def update_position(x, y, leg):
         plt.draw()
 
 def trace_path(equation, x_range, x_direction, leg):
+    print("TRACE PATH")
     if (x_direction > 0):
         current_x = x_range[0]
-        while(current_x <= x_range[1]):
+        while(current_x < x_range[1]):
             y = equation(current_x)
             print("X: ", current_x, "Y: ", y)
             update_position(current_x, y, leg)
 #             plt.pause(0.00001)
-            current_x += x_direction
+            current_x += 0.3 * x_direction
     elif (x_direction < 0):
         current_x = x_range[1]
-        while(current_x >= x_range[0]):
+        while(current_x > x_range[0]):
             y = equation(current_x)
             print("X: ", current_x, "Y: ", y)
             update_position(current_x, y, leg)
 #             plt.pause(0.00001)
-            current_x += x_direction
+            current_x += 0.3 * x_direction
 
 legEq = legEquations()
-
-# Initial plot (servo init pos determined by arduino program)
-def take_step_single(leg):
-    trace_path(legEq.sin_step, (-70, 70), -30, leg)
-    trace_path(legEq.flat_line, (-70, 70), 20, leg)
-
-def take_step_back(leg):
-    trace_path(legEq.flat_line, (-70, 70), -20, leg)
-    trace_path(legEq.sin_step, (-70, 70), 30, leg)
-
-def moveLegUpDown(leg, waitTime = 0.5):
-    trace_path(legEq.sin_step, (-70, -70.17), 0.17, leg)
-    time.sleep(waitTime)
-    trace_path(legEq.upstep, (-70, -70.17), -0.17, leg)
-
 
 """  reference
        front
@@ -311,74 +298,105 @@ def moveLegUpDown(leg, waitTime = 0.5):
        [1, 2]
        back   
 """
+legset1 = [1,4]
+legset2 = [2,3]
 
+stop_event = threading.Event()
 
-def TrotStepInPlace(legs, delay_between_legs=0.2):
+def mult_action(action1, arg1, action2, arg2):
+    print("mult action")
     threads = []
-    for i, leg in enumerate(legs):
-        thread = threading.Thread(target=moveLegUpDown, args=(leg,))
-        threads.append(thread)
-        thread.start()
-        if i < len(legs) - 1:
-            time.sleep(delay_between_legs)
-
-    for thread in threads:
-        thread.join()
-
-def stepInPlace():
-    TrotStepInPlace([1, 4])
-    TrotStepInPlace([2, 3], delay_between_legs=0.5)
-
-def move_forward():
-    move_mult_legs([1, 4])
-    move_mult_legs([2, 3])
-
-def move_backward():
-    move_mult_legs([2, 3])
-    move_mult_legs([1, 4])
-
-def turn_left():
-    move_mult_legs([2, 4])
-    move_mult_legs([1, 3], reverse=True)
-
-def turn_right():
-    move_mult_legs([1, 3])
-    move_mult_legs([2, 4], reverse=True)
-
-
-def move_mult_legs(legs, reverse=False):
-    threads = []
-    for leg in legs:
-        if reverse:
-            thread = threading.Thread(target=take_step_back, args=(leg,))
-        else:
-            thread = threading.Thread(target=take_step_single, args=(leg,))
-        threads.append(thread)
+    thread1 = threading.Thread(target=trace_path, args=arg1)
+    thread2 = threading.Thread(target=trace_path, args=arg2)
+    threads.append(thread1)
+    threads.append(thread2)
 
     for thread in threads:
         thread.start()
 
     for thread in threads:
         thread.join()
+
+def raise_forward(legs):
+    print(f"Raising legs forward: {legs}")
+    mult_action(trace_path, (legEq.sin_step, (-70,70), -4, legs[0]), 
+                trace_path, (legEq.sin_step, (-70,70), -4, legs[1]))
+
+def slide_back(legs):
+    print(f"Sliding legs back: {legs}")
+    mult_action(trace_path, (legEq.flat_line, (-70,70), 4, legs[0]), 
+                trace_path, (legEq.flat_line, (-70,70), 4, legs[1]))
+
+def move_forward(legset1, legset2, stop_event):
+    mult_action(
+        trace_path, (legEq.sin_step, (-70, 70), -4, legset1[0]),
+        trace_path, (legEq.sin_step, (-70, 70), -4, legset1[1])
+    )
+    time.sleep(1)
+
+    while stop_event.is_set():
+        threads = []
+        threads.append(threading.Thread(target=trace_path, args=(legEq.sin_step, (-70, 70), -4, legset2[0])))
+        threads.append(threading.Thread(target=trace_path, args=(legEq.sin_step, (-70, 70), -4, legset2[1])))
+        threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset1[0])))
+        threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset1[1])))
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        if not stop_event.is_set():
+            break
+        time.sleep(8)
+        threads = []
+        threads.append(threading.Thread(target=trace_path, args=(legEq.sin_step, (-70, 70), -4, legset1[0])))
+        threads.append(threading.Thread(target=trace_path, args=(legEq.sin_step, (-70, 70), -4, legset1[1])))
+        threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset2[0])))
+        threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset2[1])))
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+            
+        stop_event.clear()
+
+    threads = []
+    threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset1[0])))
+    threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset1[1])))
+    threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset2[0])))
+    threads.append(threading.Thread(target=trace_path, args=(legEq.flat_line, (-70, 70), 4, legset2[1])))
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    time.sleep(1)
 
 def on_press(key):
     try:
-        if key.char == 'w':
-            move_forward()
-        elif key.char == 's':
-            move_backward()
-        elif key.char == 'a':
-            turn_left()
-        elif key.char == 'd':
-            turn_right()
+        if hasattr(key, 'char') and key.char == '1':
+            if stop_event.is_set():
+                stop_event.clear()
+                threading.Thread(target=move_forward, args=(legset1, legset2, stop_event)).start()
     except AttributeError:
-        print('Special key {0} pressed'.format(key))
-    
-    time.sleep(1)
+        print(f'{key} pressed')
 
 def on_release(key):
-    if key == keyboard.Key.esc:
-        return False
+    global stop_event
+    try:
+        if key == keyboard.Key.esc:
+            return False
+        elif hasattr(key, 'char') and key.char == '1':
+            stop_event.set()
+            
+    except AttributeError:
+        print(f'{key} released')
 
 with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
     listener.join()
